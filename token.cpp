@@ -1,4 +1,5 @@
 #include "token.h"
+#include <sstream> // Required for std::ostringstream
 
 Token::Token(Type type, const std::string &lexeme, int start_line, int start_column, int end_line, int end_column)
     : type(type), lexeme(lexeme), start_line(start_line), start_column(start_column), end_line(end_line), end_column(end_column) {}
@@ -36,13 +37,14 @@ std::string Token::getTokenTypeName(Token::Type type)
     case Type::SEMI_COLON: return "SEMI_COLON";
     case Type::COMMA: return "COMMA";
     case Type::ENDOFFILE: return "ENDOFFILE";
-    default: return "Unknown";
+    default: return "UNKNOWN";
     }
 }
 
 std::string Token::toString() const
 {
-    return "Token(" + getTokenTypeName(type) + ", \"" + lexeme + "\", " +
-           std::to_string(start_line) + ":" + std::to_string(start_column) + "-" +
-           std::to_string(end_line) + ":" + std::to_string(end_column) + ")";
+    std::ostringstream oss;
+    oss << "Token(" << getTokenTypeName(type) << ", \"" << lexeme << "\", "
+        << start_line << ":" << start_column << " - " << end_line << ":" << end_column << ")";
+    return oss.str();
 }

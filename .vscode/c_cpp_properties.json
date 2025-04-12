@@ -6,7 +6,8 @@
                 "${workspaceFolder}/**",
                 "/usr/include/qt5/QtWidgets",
                 "/usr/include/qt5",
-                "/usr/include/qt5/QtCore"
+                "/usr/include/qt5/QtCore",
+                "/usr/include/qt5/QtGui"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

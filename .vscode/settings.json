@@ -70,6 +70,7 @@
         "stop_token": "cpp",
         "thread": "cpp",
         "qfiledialog": "cpp",
-        "qmenubar": "cpp"
+        "qmenubar": "cpp",
+        "qfont": "cpp"
     }
 }
