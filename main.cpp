@@ -1,18 +1,18 @@
+#include "interpreter.h"
+#include "lexer.h"
+#include "parser.h"
+#include <cctype>
+#include <fstream>
 #include <iostream>
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <string>
-#include <fstream>
-#include <cctype> // Include for isdigit, isalpha, isalnum, isspace
-#include "lexer.h"
 
 using namespace std;
 
-
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-    if (argc != 2)
-    {
+    if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " <source_file>" << std::endl;
         return 1;
     }
@@ -23,19 +23,24 @@ int main(int argc, char **argv)
         return 1;
     }
     std::string source((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
+        std::istreambuf_iterator<char>());
     file.close();
 
     Lexer lexer(source);
-    Token token = lexer.nextToken();
-    while (token.type != Token::Type::ENDOFFILE)
-    {
-        cout << token.toString() << '\n';
-        token = lexer.nextToken();
-    }
+    Parser parser(lexer);
 
-    cout << token.toString() << '\n';
-    cout << "Lexer finished." << endl;
+    try {
+        vector<Statement*> program = parser.parse();
+
+        for (auto& stmt : program) {
+            stmt->print(0);
+        }
+
+        Interpreter interpreter;
+        interpreter.interpret(program);
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
 
     return 0;
 }

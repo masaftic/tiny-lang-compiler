@@ -1,6 +1,7 @@
 #include "lexer.h"
 #include <cctype>
 #include <iostream>
+#include "parser.h"
 
 Lexer::Lexer(const std::string &source) : source(source), current(0), line(1), column(1)
 {
@@ -82,7 +83,7 @@ Token Lexer::nextToken()
         return numberLiteral(start_line, start_column);
     }
 
-    if (isalpha(c) || c == '_') {
+    if (isalpha(c)) {
         return identifierOrKeyword(start_line, start_column);
     }
 
@@ -107,7 +108,8 @@ void Lexer::advance() {
     current++;
 }
 
-char Lexer::peek() const {
+char Lexer::peek() const
+{
     if (isAtEnd()) return '\0';
     return source[current];
 }

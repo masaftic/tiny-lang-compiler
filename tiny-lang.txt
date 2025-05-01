@@ -1,10 +1,13 @@
-read x; { input an integer }
-if 0<x then { don’t compute if x<=0 }
-fact:=1;
-repeat
-fact := fact*x;
-x := x-1
-until x=0;
-write fact {output factorial of x}
-write "hello, world!"
+write "input an integer: ";
+read x;
+if x >= 0 then
+    fact:=1;
+    repeat
+        fact := fact*x;
+        x := x-1;
+    until x=0;
+
+    write "Result factorial is: ";
+    write fact;
+    write "hello, world!";
 end
