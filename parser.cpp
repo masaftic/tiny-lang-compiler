@@ -170,10 +170,10 @@ Expr* Parser::factor()
 Expr* Parser::primary()
 {
     if (match(Token::Type::NUMBER)) {
-        return new NumberExpr(previous().lexeme, Token::Type::NUMBER);
+        return new NumberExpr(previous());
     }
     if (match(Token::Type::LITERAL)) {
-        return new LiteralExpr(previous().lexeme, Token::Type::LITERAL);
+        return new LiteralExpr(previous());
     }
     if (match(Token::Type::LEFT_PARENTHESIS)) {
         Expr* expr = this->expression();

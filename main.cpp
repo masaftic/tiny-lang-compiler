@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <sstream>
 
 using namespace std;
 
@@ -29,15 +30,26 @@ int main(int argc, char** argv)
     Lexer lexer(source);
     Parser parser(lexer);
 
+    std::string inputSource;
+    std::cout << "Enter input source (leave empty to use standard input): ";
+    std::getline(std::cin, inputSource);
+
+    std::istringstream inputStream(inputSource);
+    std::ostringstream outputStream;
+    Interpreter interpreter(inputSource.empty() ? std::cin : inputStream, outputStream);
+
     try {
         vector<Statement*> program = parser.parse();
-
+        string output;
         for (auto& stmt : program) {
-            stmt->print(0);
+            output += stmt->toString(0);
         }
+        cout << "Parsed Program:\n" << output << endl;
 
-        Interpreter interpreter;
         interpreter.interpret(program);
+
+        // Output the result of interpretation
+        std::cout << "Interpreter Output:\n" << outputStream.str();
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }

@@ -1,35 +1,38 @@
 #include <QApplication>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QLabel>
-#include <QWidget>
-#include <QTextEdit>
-#include <iostream>
 #include <QFileDialog>
-#include <QTextStream>
+#include <QFileInfo>
+#include <QFont>
+#include <QHBoxLayout>
+#include <QInputDialog>
+#include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QHBoxLayout>
-#include <QFileInfo> // Include QFileInfo for file name extraction
-#include <QSplitter> // Include QSplitter
-#include <QFont>     // Include QFont
+#include <QPushButton>
+#include <QSplitter>
+#include <QTextEdit>
+#include <QTextStream>
+#include <QVBoxLayout>
+#include <QWidget>
+#include <iostream>
+#include <sstream>
 
-// Include Lexer and Token headers
 #include "lexer.h"
 #include "token.h"
-#include <string> // Include for std::string conversion
-
+#include <string>
+#include "parser.h"
+#include "interpreter.h"
 
 class CodeEditor : public QWidget {
 public:
-    CodeEditor() {
+    CodeEditor()
+    {
         editor = new QTextEdit(this);
         editor->setPlaceholderText("Insert text here...");
         // Use a monospace font for the editor
         QFont editorFont("Monospace", 15);
         editorFont.setStyleHint(QFont::TypeWriter);
         editor->setFont(editorFont);
-
+        editor->setStyleSheet("font-family: Jetbrains mono;");
 
         fileNameLabel = new QLabel(this);
         fileNameLabel->setText("Untitled");
@@ -43,55 +46,54 @@ public:
         QFont outputFont("Monospace");
         outputFont.setStyleHint(QFont::TypeWriter);
         outputArea->setFont(outputFont);
+        outputArea->setStyleSheet("font-family: Jetbrains mono;");
 
-        QLabel *outputAreaLabel = new QLabel("Output");
+        QLabel* outputAreaLabel = new QLabel("Output");
         outputAreaLabel->setStyleSheet("font-weight: bold; color: gray;");
         outputAreaLabel->setAlignment(Qt::AlignCenter);
 
+        QPushButton* scanButton = new QPushButton("Scan");
+        QPushButton* runButton = new QPushButton("Run");
+        QPushButton* parseButton = new QPushButton("Parse");
 
-        QPushButton *scanButton = new QPushButton("Scan");
-        QPushButton *runButton = new QPushButton("Run");
-        QPushButton *parseButton = new QPushButton("Parse");
-
-        QHBoxLayout *buttonLayout = new QHBoxLayout();
+        QHBoxLayout* buttonLayout = new QHBoxLayout();
         buttonLayout->addWidget(scanButton);
         buttonLayout->addWidget(runButton);
         buttonLayout->addWidget(parseButton);
 
-
         // --- Layout Setup using QSplitter ---
 
         // Left side widget (editor + label)
-        QWidget *leftWidget = new QWidget;
-        QVBoxLayout *leftLayout = new QVBoxLayout(leftWidget); // Set layout on the widget
+        QWidget* leftWidget = new QWidget;
+        QVBoxLayout* leftLayout = new QVBoxLayout(leftWidget); // Set layout on the widget
         leftLayout->addWidget(fileNameLabel);
         leftLayout->addWidget(editor);
-        leftLayout->setContentsMargins(0,0,0,0); // Remove margins if desired
+        leftLayout->setContentsMargins(0, 0, 0, 0); // Remove margins if desired
 
         // Right side widget (output + label + buttons)
-        QWidget *rightWidget = new QWidget;
-        QVBoxLayout *rightLayout = new QVBoxLayout(rightWidget); // Set layout on the widget
+        QWidget* rightWidget = new QWidget;
+        QVBoxLayout* rightLayout = new QVBoxLayout(rightWidget); // Set layout on the widget
         rightLayout->addWidget(outputAreaLabel);
         rightLayout->addWidget(outputArea);
         rightLayout->addLayout(buttonLayout);
-        rightLayout->setContentsMargins(0,0,0,0); // Remove margins if desired
+        rightLayout->setContentsMargins(0, 0, 0, 0); // Remove margins if desired
 
         // Create the splitter
-        QSplitter *splitter = new QSplitter(Qt::Horizontal);
+        QSplitter* splitter = new QSplitter(Qt::Horizontal);
         splitter->addWidget(leftWidget);
         splitter->addWidget(rightWidget);
         splitter->setStretchFactor(0, 2); // Initial stretch factor for left
         splitter->setStretchFactor(1, 1); // Initial stretch factor for right
-        splitter->setHandleWidth(10); // Set handle width for better visibility
+        splitter->setHandleWidth(5); // Set handle width for better visibility
 
         // Menu Bar
-        QMenuBar *menuBar = new QMenuBar(); // Create menu bar without parent first
-        QMenu *fileMenu = menuBar->addMenu("File");
+        QMenuBar* menuBar = new QMenuBar(); // Create menu bar without parent first
+        QMenu* fileMenu = menuBar->addMenu("File");
 
-        QAction *openAction = new QAction("Open", this);
-        QAction *saveAction = new QAction("Save", this);
-        QAction *saveAsAction = new QAction("Save As", this);
-        QAction *exitAction = new QAction("Exit", this);
+        QAction* openAction = new QAction("Open", this);
+        QAction* saveAction = new QAction("Save", this);
+        QAction* saveAsAction = new QAction("Save As", this);
+        QAction* exitAction = new QAction("Exit", this);
 
         fileMenu->addAction(openAction);
         fileMenu->addAction(saveAction);
@@ -99,11 +101,10 @@ public:
         fileMenu->addAction(exitAction);
 
         // Main layout for the CodeEditor widget
-        QVBoxLayout *mainVLayout = new QVBoxLayout(this); // Use QVBoxLayout to hold menu and splitter
+        QVBoxLayout* mainVLayout = new QVBoxLayout(this); // Use QVBoxLayout to hold menu and splitter
         mainVLayout->setMenuBar(menuBar); // Add menu bar to the layout
         mainVLayout->addWidget(splitter); // Add splitter below the menu bar
-        mainVLayout->setContentsMargins(5,0,5,5); // Adjust margins as needed (top is 0 due to menubar)
-
+        mainVLayout->setContentsMargins(5, 5, 5, 5);
 
         // Connect actions and buttons
         connect(openAction, &QAction::triggered, this, &CodeEditor::openFile);
@@ -113,11 +114,14 @@ public:
 
         // Connect scan button to the new slot
         connect(scanButton, &QPushButton::clicked, this, &CodeEditor::scanSource);
+        connect(parseButton, &QPushButton::clicked, this, &CodeEditor::parseSource);
+        connect(runButton, &QPushButton::clicked, this, &CodeEditor::runSource);
         // TODO: Connect runButton and parseButton later
     }
 
-private slots: // Make methods intended as slots private slots
-    void openFile() {
+private slots:
+    void openFile()
+    {
         QString fileName = QFileDialog::getOpenFileName(this, "Open File");
         if (!fileName.isEmpty()) {
             QFile file(fileName);
@@ -130,12 +134,13 @@ private slots: // Make methods intended as slots private slots
                 QFileInfo fileInfo(fileName);
                 fileNameLabel->setText(fileInfo.fileName());
             } else {
-                 QMessageBox::warning(this, "Error", "Could not open file for reading.");
+                QMessageBox::warning(this, "Error", "Could not open file for reading.");
             }
         }
     }
 
-    void saveFile() {
+    void saveFile()
+    {
         if (curentFilePath.isEmpty()) {
             saveFileAs();
             return;
@@ -151,7 +156,8 @@ private slots: // Make methods intended as slots private slots
         }
     }
 
-    void saveFileAs() {
+    void saveFileAs()
+    {
         QString fileName = QFileDialog::getSaveFileName(this, "Save File As");
         if (!fileName.isEmpty()) {
             QFile file(fileName);
@@ -163,16 +169,16 @@ private slots: // Make methods intended as slots private slots
                 QFileInfo fileInfo(fileName);
                 fileNameLabel->setText(fileInfo.fileName());
             } else {
-                 QMessageBox::warning(this, "Error", "Could not save file to: " + fileName);
+                QMessageBox::warning(this, "Error", "Could not save file to: " + fileName);
             }
         }
     }
 
-    // New slot for scanning the source code
-    void scanSource() {
-        outputArea->clear(); // Clear previous output
+    void scanSource()
+    {
+        outputArea->clear();
         QString sourceCode = editor->toPlainText();
-        std::string sourceStdString = sourceCode.toStdString(); // Convert to std::string
+        std::string sourceStdString = sourceCode.toStdString();
 
         if (sourceStdString.empty()) {
             outputArea->setText("Editor is empty.");
@@ -198,16 +204,88 @@ private slots: // Make methods intended as slots private slots
         }
     }
 
+    void parseSource()
+    {
+        outputArea->clear();
+        QString sourceCode = editor->toPlainText();
+        std::string sourceStdString = sourceCode.toStdString();
+
+        if (sourceStdString.empty()) {
+            outputArea->setText("Editor is empty.");
+            return;
+        }
+
+        try {
+            Lexer lexer(sourceStdString);
+            Parser parser(lexer);
+            auto statements = parser.parse();
+            string output;
+            for (const auto& stmt : statements) {
+                output += stmt->toString(0);
+            }
+            outputArea->append("--- PARSER OUTPUT ---\n");
+            outputArea->append(QString::fromStdString(output));
+        } catch (const std::exception& e) {
+            outputArea->append("--- PARSER ERROR ---\n");
+            outputArea->append(QString("Error: %1").arg(e.what()));
+        } catch (...) {
+            outputArea->append("--- UNKNOWN PARSER ERROR ---\n");
+        }
+    }
+
+    void runSource()
+    {
+        outputArea->clear();
+        QString sourceCode = editor->toPlainText();
+        std::string sourceStdString = sourceCode.toStdString();
+
+        if (sourceStdString.empty()) {
+            outputArea->setText("Editor is empty.");
+            return;
+        }
+
+        try {
+            Lexer lexer(sourceStdString);
+            Parser parser(lexer);
+            auto statements = parser.parse();
+
+            // Custom input and output streams
+            std::istringstream inputStream;
+            std::ostringstream outputStream;
+
+            // Prompt user for input if needed
+            bool ok;
+            QString userInput = QInputDialog::getMultiLineText(this, "Input Required", 
+                                                               "Provide input for the program:", 
+                                                               "", &ok);
+            if (ok) {
+                inputStream.str(userInput.toStdString());
+            }
+
+            // Pass custom streams to the interpreter
+            Interpreter interpreter(inputStream, outputStream);
+            interpreter.interpret(statements);
+
+            // Display the output in the outputArea
+            outputArea->append(QString::fromStdString(outputStream.str()));
+            outputArea->append("\nInterpreter finished.");
+        } catch (const std::exception& e) {
+            outputArea->append("\n--- INTERPRETER ERROR ---");
+            outputArea->append(QString("Error: %1").arg(e.what()));
+        } catch (...) {
+            outputArea->append("\n--- UNKNOWN INTERPRETER ERROR ---");
+        }
+    }
 
 private:
-    QTextEdit *editor;
-    QLabel *fileNameLabel;
+    QTextEdit* editor;
+    QLabel* fileNameLabel;
     QString curentFilePath;
-    QTextEdit *outputArea; // Moved outputArea here
+    QTextEdit* outputArea;
 };
 
-
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[])
+{
     QApplication app(argc, argv);
 
     CodeEditor codeEditor;

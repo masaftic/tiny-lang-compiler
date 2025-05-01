@@ -12,7 +12,7 @@ using namespace std;
 class Expr {
 public:
     virtual ~Expr() = default; // Virtual destructor
-    virtual void print() const = 0; // Pure virtual function
+    virtual string toString() const = 0; // Pure virtual function
     virtual float eval(SymbolRegistry& symbols) const = 0; // Pure virtual function
 };
 
@@ -30,19 +30,19 @@ public:
     {
     }
 
-    void print() const override
+    string toString() const override
     {
-        cout << "BinaryExpr(";
-        left->print();
-        cout << " " << op.lexeme << " ";
-        right->print();
-        cout << ")";
+        return "BinaryExpr(" + left->toString() + " " + op.lexeme + " " + right->toString() + ")";
     }
 
     float eval(SymbolRegistry& symbols) const override
     {
         float leftValue = left->eval(symbols);
         float rightValue = right->eval(symbols);
+
+        if (op.type == Token::Type::DIVIDE && rightValue == 0) {
+            throw runtime_error("Division by zero at operator '" + op.lexeme + "' at line " + to_string(op.start_line) + ", column " + to_string(op.start_column));
+        }
 
         if (op.type == Token::Type::PLUS)
             return leftValue + rightValue;
@@ -69,7 +69,7 @@ public:
         if (op.type == Token::Type::NOT_EQUAL)
             return leftValue != rightValue ? 1 : 0;
 
-        throw runtime_error("Unknown operator: " + op.lexeme);
+        throw runtime_error("Unknown operator: '" + op.lexeme + "' at line " + to_string(op.start_line) + ", column " + to_string(op.start_column));
     }
 };
 
@@ -83,11 +83,9 @@ public:
     {
     }
 
-    void print() const override
+    string toString() const override
     {
-        cout << "GroupingExpression(";
-        expression->print();
-        cout << ")";
+        return "GroupingExpression(" + expression->toString() + ")";
     }
 
     float eval(SymbolRegistry& symbols) const override
@@ -98,44 +96,42 @@ public:
 
 class NumberExpr : public Expr {
 private:
-    string value;
-    Token::Type type;
+    Token token;
 
 public:
-    NumberExpr(const string& value, Token::Type type)
-        : value(value)
-        , type(type)
+    NumberExpr(const Token& token)
+        : token(token)
     {
     }
 
-    void print() const override
+    string toString() const override
     {
-        cout << "NumberExpr(" << value << ")";
+        return "NumberExpr(" + token.lexeme + ")";
     }
 
     float eval(SymbolRegistry& symbols) const override
     {
-        if (type == Token::Type::NUMBER) {
-            return stof(value);
+        if (token.type == Token::Type::NUMBER) {
+            return stof(token.lexeme);
         }
-        throw runtime_error("Invalid literal type for evaluation");
+        throw runtime_error("Invalid literal type for evaluation: '" + token.lexeme + "' at line " + to_string(token.start_line) + ", column " + to_string(token.start_column));
     }
 };
 
 class LiteralExpr : public Expr {
 private:
-    string value;
-    Token::Type type;
+    Token token;
+    ;
+
 public:
-    LiteralExpr(const string& value, Token::Type type)
-        : value(value)
-        , type(type)
+    LiteralExpr(const Token& token)
+        : token(token)
     {
     }
 
-    void print() const override
+    string toString() const override
     {
-        cout << "LiteralExpr(" << value << ")";
+        return "LiteralExpr(" + token.lexeme + ")";
     }
 
     float eval(SymbolRegistry& symbols) const override
@@ -145,7 +141,7 @@ public:
 
     string getValue() const
     {
-        return value;
+        return token.lexeme;
     }
 };
 
@@ -159,14 +155,18 @@ public:
     {
     }
 
-    void print() const override
+    string toString() const override
     {
-        cout << "VariableExpr(" << identifier.lexeme << ")";
+        return "VariableExpr(" + identifier.lexeme + ")";
     }
 
     float eval(SymbolRegistry& symbols) const override
     {
-        return symbols.get(identifier.lexeme);
+        try {
+            return symbols.get(identifier.lexeme);
+        } catch (const std::runtime_error& e) {
+            throw runtime_error("Undefined variable: '" + identifier.lexeme + "' at line " + to_string(identifier.start_line) + ", column " + to_string(identifier.start_column));
+        }
     }
 };
 
