@@ -2,7 +2,7 @@ program    -> statement*
 statement  -> assignment ";" 
             | write ";"
             | read ";"
-            | repeatStmt
+            | repeatStmt ";"
             | ifStmt 
 
 assignment -> IDENTIFIER ":=" expression

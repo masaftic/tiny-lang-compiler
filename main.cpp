@@ -27,6 +27,8 @@ int main(int argc, char** argv)
         std::istreambuf_iterator<char>());
     file.close();
 
+    source = "x := 1 + 2 * 3;";
+
     Lexer lexer(source);
     Parser parser(lexer);
 

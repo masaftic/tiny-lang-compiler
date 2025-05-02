@@ -5,10 +5,10 @@
 #include "symbolTable.h"
 #include "token.h"
 #include <iostream>
-#include <vector>
-#include <variant>
 #include <istream>
 #include <ostream>
+#include <variant>
+#include <vector>
 
 class Statement {
 public:
@@ -36,8 +36,7 @@ public:
 
     string toString(int spaceCount) const override
     {
-        return printWithIndentation(spaceCount, "AssignmentStatement(" + identifier.lexeme + ", ") +
-               expression->toString() + ");\n";
+        return printWithIndentation(spaceCount, "AssignmentStatement(" + identifier.lexeme + ", ") + expression->toString() + ");\n";
     }
 
     void execute(SymbolRegistry& symbols, std::istream& input, std::ostream& output) const override
@@ -123,7 +122,6 @@ public:
     }
 };
 
-
 class WriteStatement : public Statement {
 private:
     std::variant<Expr*, string> operand;
@@ -180,6 +178,17 @@ public:
     {
         std::string inputStr;
         input >> inputStr;
+        // Check if the input is a valid number
+        bool isNumber = true;
+        for (char c : inputStr) {
+            if (!isdigit(c)) {
+                isNumber = false;
+                break;
+            }
+        }
+        if (!isNumber) {
+            throw std::runtime_error("Invalid input for variable '" + identifier.lexeme + "': " + inputStr + " at line " + std::to_string(identifier.start_line) + ", column " + std::to_string(identifier.start_column));
+        }
         symbols.set(identifier.lexeme, std::stof(inputStr));
     }
 };

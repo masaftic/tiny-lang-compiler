@@ -16,11 +16,11 @@
 #include <iostream>
 #include <sstream>
 
+#include "interpreter.h"
 #include "lexer.h"
+#include "parser.h"
 #include "token.h"
 #include <string>
-#include "parser.h"
-#include "interpreter.h"
 
 class CodeEditor : public QWidget {
 public:
@@ -106,6 +106,16 @@ public:
         mainVLayout->addWidget(splitter); // Add splitter below the menu bar
         mainVLayout->setContentsMargins(5, 5, 5, 5);
 
+        // Status bar to display cursor position
+        statusBar = new QLabel(this);
+        statusBar->setStyleSheet("font-size: 18px; color: gray; padding: 2px;");
+        statusBar->setAlignment(Qt::AlignLeft);
+        statusBar->setFixedHeight(25); // Set a fixed height for the status bar
+        updateCursorPosition(); // Initialize cursor position display
+
+        // Add status bar to the main layout
+        mainVLayout->addWidget(statusBar);
+
         // Connect actions and buttons
         connect(openAction, &QAction::triggered, this, &CodeEditor::openFile);
         connect(saveAction, &QAction::triggered, this, &CodeEditor::saveFile);
@@ -116,7 +126,8 @@ public:
         connect(scanButton, &QPushButton::clicked, this, &CodeEditor::scanSource);
         connect(parseButton, &QPushButton::clicked, this, &CodeEditor::parseSource);
         connect(runButton, &QPushButton::clicked, this, &CodeEditor::runSource);
-        // TODO: Connect runButton and parseButton later
+        // Connect cursor position change signal
+        connect(editor, &QTextEdit::cursorPositionChanged, this, &CodeEditor::updateCursorPosition);
     }
 
 private slots:
@@ -187,15 +198,71 @@ private slots:
 
         try {
             Lexer lexer(sourceStdString);
-            Token token = lexer.nextToken();
-            while (token.type != Token::Type::ENDOFFILE) {
-                // Append token information to the output area
-                outputArea->append(QString::fromStdString(token.toString()));
-                token = lexer.nextToken();
+            QTextCursor cursor = editor->textCursor();
+            cursor.movePosition(QTextCursor::Start); // Start from the beginning of the text
+
+            QStringList lines = sourceCode.split('\n'); // Split the source code into lines
+            string outputTokens;
+
+            while (!lexer.isAtEnd()) {
+                Token token = lexer.nextToken();
+                outputTokens += token.toString() + "\n";
+
+                // Calculate the start index based on line and column
+                int startIndex = 0;
+                for (int i = 0; i < token.start_line - 1; ++i) {
+                    startIndex += lines[i].length() + 1; // Add 1 for the newline character
+                }
+                startIndex += token.start_column - 1;
+
+                // Set the format based on token type
+                QTextCharFormat format;
+                switch (token.type) {
+                case Token::Type::READ:
+                case Token::Type::REPEAT:
+                case Token::Type::UNTIL:
+                case Token::Type::WRITE:
+                case Token::Type::IF:
+                case Token::Type::ELSE:
+                case Token::Type::END:
+                case Token::Type::THEN:
+                    format.setForeground(Qt::blue);
+                    break;
+                case Token::Type::IDENTIFIER:
+                    format.setForeground(Qt::black);
+                    break;
+                case Token::Type::NUMBER:
+                    format.setForeground(Qt::darkGreen);
+                    break;
+                case Token::Type::LITERAL:
+                    format.setForeground(Qt::darkRed);
+                    break;
+                case Token::Type::MULTIPLY:
+                case Token::Type::PLUS:
+                case Token::Type::MINUS:
+                case Token::Type::DIVIDE:
+                case Token::Type::LESS_THAN:
+                case Token::Type::GREATER_THAN:
+                case Token::Type::LESS_EQUAL:
+                case Token::Type::GREATER_EQUAL:
+                case Token::Type::NOT_EQUAL:
+                case Token::Type::EQUAL:
+                case Token::Type::ASSIGNMENT:
+                    format.setForeground(Qt::darkMagenta);
+                    break;
+                default:
+                    format.setForeground(Qt::black);
+                    break;
+                }
+
+                // Apply the format to the token's range
+                cursor.setPosition(startIndex);
+                cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, token.lexeme.length() + 2);
+                cursor.setCharFormat(format);
             }
-            // Append the EOF token as well
-            outputArea->append(QString::fromStdString(token.toString()));
-            outputArea->append("\nLexer finished.");
+
+            outputArea->append("--- LEXER OUTPUT ---");
+            outputArea->append(QString::fromStdString(outputTokens));
         } catch (const std::exception& e) {
             outputArea->append("\n--- LEXER ERROR ---");
             outputArea->append(QString("Error: %1").arg(e.what()));
@@ -253,14 +320,10 @@ private slots:
             std::istringstream inputStream;
             std::ostringstream outputStream;
 
-            // Prompt user for input if needed
-            bool ok;
-            QString userInput = QInputDialog::getMultiLineText(this, "Input Required", 
-                                                               "Provide input for the program:", 
-                                                               "", &ok);
-            if (ok) {
-                inputStream.str(userInput.toStdString());
-            }
+            // Block execution and prompt user for input
+            QString userInput = QInputDialog::getMultiLineText(this, "Input Required",
+                "Provide input for the program:");
+            inputStream.str(userInput.toStdString());
 
             // Pass custom streams to the interpreter
             Interpreter interpreter(inputStream, outputStream);
@@ -277,11 +340,20 @@ private slots:
         }
     }
 
+    void updateCursorPosition()
+    {
+        QTextCursor cursor = editor->textCursor();
+        int line = cursor.blockNumber() + 1; // Line numbers are 0-based
+        int column = cursor.columnNumber() + 1; // Column numbers are 0-based
+        statusBar->setText(QString("Line: %1, Column: %2").arg(line).arg(column));
+    }
+
 private:
     QTextEdit* editor;
     QLabel* fileNameLabel;
     QString curentFilePath;
     QTextEdit* outputArea;
+    QLabel* statusBar;
 };
 
 int main(int argc, char* argv[])

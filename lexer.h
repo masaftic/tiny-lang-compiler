@@ -10,6 +10,7 @@ class Lexer
 public:
     Lexer(const std::string &source);
     Token nextToken();
+    bool isAtEnd() const; // Add this method
 
 private:
     std::string source;
@@ -19,7 +20,7 @@ private:
 
     std::unordered_map<std::string, Token::Type> reserved_map;
 
-    bool isAtEnd() const;
+    // bool isAtEnd() const;
     void advance();
     char peek() const;
     char peekNext() const;
