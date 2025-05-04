@@ -286,6 +286,13 @@ private slots:
             Lexer lexer(sourceStdString);
             Parser parser(lexer);
             auto statements = parser.parse();
+            if (parser.isError()) {
+                outputArea->append("--- PARSER ERROR ---\n");
+                for (const auto& error : parser.getErrors()) {
+                    outputArea->append(QString::fromStdString(error));
+                }
+                return;
+            }
             string output;
             for (const auto& stmt : statements) {
                 output += stmt->toString(0);

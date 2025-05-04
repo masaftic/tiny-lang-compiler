@@ -27,21 +27,25 @@ int main(int argc, char** argv)
         std::istreambuf_iterator<char>());
     file.close();
 
-    source = "x := 1 + 2 * 3;";
+    source = "write \"input an integer: \" \n read x";
 
     Lexer lexer(source);
     Parser parser(lexer);
 
-    std::string inputSource;
-    std::cout << "Enter input source (leave empty to use standard input): ";
-    std::getline(std::cin, inputSource);
-
-    std::istringstream inputStream(inputSource);
+    std::istringstream inputStream("2");
     std::ostringstream outputStream;
-    Interpreter interpreter(inputSource.empty() ? std::cin : inputStream, outputStream);
+    Interpreter interpreter(std::cin, outputStream);
 
     try {
         vector<Statement*> program = parser.parse();
+        if (parser.getErrors().size() > 0) {
+            std::cerr << "Parser errors:\n";
+            for (const auto& error : parser.getErrors()) {
+                std::cerr << error << std::endl;
+            }
+            return 1;
+        }
+
         string output;
         for (auto& stmt : program) {
             output += stmt->toString(0);

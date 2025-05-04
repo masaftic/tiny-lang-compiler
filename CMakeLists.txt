@@ -9,6 +9,9 @@ set(CMAKE_AUTORCC ON) # Enable automatic RCC handling for Qt
 
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 
+# Add the include directory for header files
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
 # Add all source files needed for the executable
 add_executable(QtHelloWorld
     qt.cpp

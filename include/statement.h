@@ -16,7 +16,7 @@ public:
     virtual string toString(int spaceCount) const = 0; // Pure virtual function
     virtual void execute(SymbolRegistry& symbols, std::istream& input, std::ostream& output) const = 0; // Updated function
 
-    string printWithIndentation(int spaceCount, const string& str) const
+    string indentStringWithSpaces(int spaceCount, const string& str) const
     {
         return string(spaceCount, ' ') + str;
     }
@@ -36,7 +36,7 @@ public:
 
     string toString(int spaceCount) const override
     {
-        return printWithIndentation(spaceCount, "AssignmentStatement(" + identifier.lexeme + ", ") + expression->toString() + ");\n";
+        return indentStringWithSpaces(spaceCount, "AssignmentStatement(" + identifier.lexeme + ", ") + expression->toString() + ");\n";
     }
 
     void execute(SymbolRegistry& symbols, std::istream& input, std::ostream& output) const override
@@ -61,17 +61,17 @@ public:
 
     string toString(int spaceCount) const override
     {
-        string result = printWithIndentation(spaceCount, "IfStatement(") + condition->toString() + ") Then\n";
+        string result = indentStringWithSpaces(spaceCount, "IfStatement(") + condition->toString() + ") Then\n";
         for (const auto& stmt : thenBranch) {
             result += stmt->toString(spaceCount + 2);
         }
-        result += printWithIndentation(spaceCount, "End\n");
+        result += indentStringWithSpaces(spaceCount, "End\n");
         if (!elseBranch.empty()) {
-            result += printWithIndentation(spaceCount, "Else\n");
+            result += indentStringWithSpaces(spaceCount, "Else\n");
             for (const auto& stmt : elseBranch) {
                 result += stmt->toString(spaceCount + 2);
             }
-            result += printWithIndentation(spaceCount, "End\n");
+            result += indentStringWithSpaces(spaceCount, "End\n");
         }
         return result;
     }
@@ -104,11 +104,11 @@ public:
 
     string toString(int spaceCount) const override
     {
-        string result = printWithIndentation(spaceCount, "RepeatStatement\n");
+        string result = indentStringWithSpaces(spaceCount, "RepeatStatement\n");
         for (const auto& stmt : body) {
             result += stmt->toString(spaceCount + 2);
         }
-        result += printWithIndentation(spaceCount, "Until (") + condition->toString() + ");\n";
+        result += indentStringWithSpaces(spaceCount, "Until (") + condition->toString() + ");\n";
         return result;
     }
 
@@ -139,7 +139,7 @@ public:
 
     string toString(int spaceCount) const override
     {
-        string result = printWithIndentation(spaceCount, "WriteStatement(");
+        string result = indentStringWithSpaces(spaceCount, "WriteStatement(");
         if (holds_alternative<Expr*>(operand)) {
             result += get<Expr*>(operand)->toString();
         } else {
@@ -171,7 +171,7 @@ public:
 
     string toString(int spaceCount) const override
     {
-        return printWithIndentation(spaceCount, "ReadStatement(" + identifier.lexeme + ");\n");
+        return indentStringWithSpaces(spaceCount, "ReadStatement(" + identifier.lexeme + ");\n");
     }
 
     void execute(SymbolRegistry& symbols, std::istream& input, std::ostream& output) const override

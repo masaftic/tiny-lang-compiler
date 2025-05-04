@@ -17,6 +17,7 @@ private:
     Lexer& lexer;
     Token currentToken;
     Token previousToken;
+    vector<string> errors;
 
     void advance();
     Token previous();
@@ -31,7 +32,7 @@ private:
     Statement* repeatStatement();
     Statement* writeStatement();
     Statement* readStatement();
-    
+
     Expr* expression();
     Expr* equality();
     Expr* comparison();
@@ -39,9 +40,28 @@ private:
     Expr* factor();
     Expr* primary();
 
+    void synchronize();
+
+    void addError(const Token& token, const string& message)
+    {
+        errors.push_back("Syntax error: " + message + " at line " + to_string(token.start_line) + ", column " + to_string(token.start_column));
+    }
+
 public:
     Parser(Lexer& lexer);
     vector<Statement*> parse();
+    bool isError() const
+    {
+        return !errors.empty();
+    }
+    const vector<string>& getErrors() const
+    {
+        return errors;
+    }
+};
+
+class ParserError : public exception {
+
 };
 
 #endif // PARSER_H

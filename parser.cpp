@@ -1,4 +1,7 @@
 #include "parser.h"
+#include <numeric>
+#include <string>
+#include <vector>
 
 Parser::Parser(Lexer& lexer)
     : lexer(lexer)
@@ -25,19 +28,25 @@ vector<Statement*> Parser::program()
 
 Statement* Parser::statement()
 {
-    if (currentToken.type == Token::Type::IDENTIFIER) {
-        return assignment();
-    } else if (currentToken.type == Token::Type::IF) {
-        return ifStatement();
-    } else if (currentToken.type == Token::Type::REPEAT) {
-        return repeatStatement();
-    } else if (currentToken.type == Token::Type::WRITE) {
-        return writeStatement();
-    } else if (currentToken.type == Token::Type::READ) {
-        return readStatement();
+    try {
+        if (currentToken.type == Token::Type::IDENTIFIER) {
+            return assignment();
+        } else if (currentToken.type == Token::Type::IF) {
+            return ifStatement();
+        } else if (currentToken.type == Token::Type::REPEAT) {
+            return repeatStatement();
+        } else if (currentToken.type == Token::Type::WRITE) {
+            return writeStatement();
+        } else if (currentToken.type == Token::Type::READ) {
+            return readStatement();
+        } else {
+            addError(currentToken, "Unexpected token.");
+            throw ParserError();
+        }
+    } catch (const ParserError& e) {
+        synchronize();
+        return nullptr;
     }
-
-    throw runtime_error("Unexpected token: " + currentToken.toString());
 }
 
 Statement* Parser::assignment()
@@ -184,7 +193,31 @@ Expr* Parser::primary()
         return new VariableExpr(previous());
     }
 
-    throw runtime_error("Expect expression Found: " + previous().toString() + " at line " + std::to_string(currentToken.start_line) + ", column " + std::to_string(currentToken.start_column));
+    addError(previous(), "Expect expression.");
+    throw ParserError();
+}
+
+void Parser::synchronize()
+{
+    advance();
+
+    while (currentToken.type != Token::Type::ENDOFFILE) {
+        if (previousToken.type == Token::Type::SEMI_COLON) {
+            return;
+        }
+
+        switch (currentToken.type) {
+        case Token::Type::IF:
+        case Token::Type::REPEAT:
+        case Token::Type::WRITE:
+        case Token::Type::READ:
+            return;
+        default:
+            break;
+        }
+
+        advance();
+    }
 }
 
 void Parser::advance()
@@ -200,7 +233,8 @@ void Parser::consume(Token::Type type, const string& message)
         return;
     }
 
-    throw runtime_error(message + " Found: " + currentToken.toString() + " at line " + std::to_string(currentToken.start_line) + ", column " + std::to_string(currentToken.start_column));
+    addError(previous(), message);
+    throw ParserError();
 }
 
 bool Parser::match(Token::Type type)

@@ -11,6 +11,7 @@
                 "lexer.cpp",
                 "parser.cpp",
                 "token.cpp",
+                "-I./include",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
             ],
