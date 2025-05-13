@@ -151,12 +151,8 @@ public:
         for (const auto& operand : operands) {
             if (auto literal = dynamic_cast<LiteralExpr*>(operand)) {
                 output << literal->getValue();
-            } else if (auto variable = dynamic_cast<VariableExpr*>(operand)) {
-                output << operand->eval(symbols);
-            } else if (auto number = dynamic_cast<NumberExpr*>(operand)) {
-                output << operand->eval(symbols);
             } else {
-                throw std::runtime_error("Invalid expression type for WriteStatement.");
+                output << operand->eval(symbols);
             }
         }
         output << std::endl;

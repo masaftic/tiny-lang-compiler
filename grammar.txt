@@ -10,7 +10,7 @@ Assignment  -> IDENTIFIER ":=" Expression ";"
 IfStmt      -> "if" Expression "then" Statement* "end" ("else" Statement* "end")?
 RepeatStmt  -> "repeat" Statement* "until" Expression ";"
 Write       -> "write" Expression ("," Expression)* ";"
-Read        -> "read" IDENTIFIER ("," IDENTIFIER)? ";"
+Read        -> "read" IDENTIFIER ("," IDENTIFIER)* ";"
 
 Expression  -> Equality
 Equality    -> Comparison (("=" | "!=") Comparison)*
