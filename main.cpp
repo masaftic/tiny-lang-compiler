@@ -27,12 +27,10 @@ int main(int argc, char** argv)
         std::istreambuf_iterator<char>());
     file.close();
 
-    source = "write \"input an integer: \" \n read x";
 
     Lexer lexer(source);
     Parser parser(lexer);
 
-    std::istringstream inputStream("2");
     std::ostringstream outputStream;
     Interpreter interpreter(std::cin, outputStream);
 
@@ -48,13 +46,13 @@ int main(int argc, char** argv)
 
         string output;
         for (auto& stmt : program) {
-            output += stmt->toString(0);
+            output += stmt->toString();
         }
+
         cout << "Parsed Program:\n" << output << endl;
 
         interpreter.interpret(program);
 
-        // Output the result of interpretation
         std::cout << "Interpreter Output:\n" << outputStream.str();
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

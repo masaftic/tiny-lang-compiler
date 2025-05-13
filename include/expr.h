@@ -11,9 +11,9 @@ using namespace std;
 
 class Expr {
 public:
-    virtual ~Expr() = default; // Virtual destructor
-    virtual string toString() const = 0; // Pure virtual function
-    virtual float eval(SymbolRegistry& symbols) const = 0; // Pure virtual function
+    virtual ~Expr() = default;
+    virtual string toString() const = 0;
+    virtual float eval(SymbolRegistry& symbols) const = 0;
 };
 
 class BinaryExpr : public Expr {
@@ -73,6 +73,7 @@ public:
     }
 };
 
+
 class GroupingExpression : public Expr {
 private:
     Expr* expression;
@@ -131,7 +132,7 @@ public:
 
     string toString() const override
     {
-        return "LiteralExpr(" + token.lexeme + ")";
+        return "LiteralExpr(\"" + token.lexeme + "\")";
     }
 
     float eval(SymbolRegistry& symbols) const override
@@ -144,6 +145,7 @@ public:
         return token.lexeme;
     }
 };
+
 
 class VariableExpr : public Expr {
 private:

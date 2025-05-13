@@ -42,11 +42,7 @@ private:
 
     void synchronize();
 
-    void addError(const Token& token, const string& message)
-    {
-        errors.push_back("Syntax error: " + message + " at line " + to_string(token.start_line) + ", column " + to_string(token.start_column));
-    }
-
+    void addError(const Token& token, const string& message);
 public:
     Parser(Lexer& lexer);
     vector<Statement*> parse();

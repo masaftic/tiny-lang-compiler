@@ -9,12 +9,13 @@
 #include <ostream>
 #include <variant>
 #include <vector>
+#include <regex>
 
 class Statement {
 public:
-    virtual ~Statement() = default; // Virtual destructor
-    virtual string toString(int spaceCount) const = 0; // Pure virtual function
-    virtual void execute(SymbolRegistry& symbols, std::istream& input, std::ostream& output) const = 0; // Updated function
+    virtual ~Statement() = default;
+    virtual string toString(int spaceCount = 0) const = 0;
+    virtual void execute(SymbolRegistry& symbols, std::istream& input, std::ostream& output) const = 0;
 
     string indentStringWithSpaces(int spaceCount, const string& str) const
     {
@@ -34,7 +35,7 @@ public:
     {
     }
 
-    string toString(int spaceCount) const override
+    string toString(int spaceCount = 0) const override
     {
         return indentStringWithSpaces(spaceCount, "AssignmentStatement(" + identifier.lexeme + ", ") + expression->toString() + ");\n";
     }
@@ -124,26 +125,22 @@ public:
 
 class WriteStatement : public Statement {
 private:
-    std::variant<Expr*, string> operand;
+    vector<Expr*> operands;
 
 public:
-    WriteStatement(Expr* operand)
-        : operand(operand)
-    {
-    }
-
-    WriteStatement(const string& operand)
-        : operand(operand)
+    WriteStatement(const vector<Expr*>& operands)
+        : operands(operands)
     {
     }
 
     string toString(int spaceCount) const override
     {
         string result = indentStringWithSpaces(spaceCount, "WriteStatement(");
-        if (holds_alternative<Expr*>(operand)) {
-            result += get<Expr*>(operand)->toString();
-        } else {
-            result += "\"" + get<string>(operand) + "\"";
+        for (size_t i = 0; i < operands.size(); ++i) {
+            result += operands[i]->toString();
+            if (i < operands.size() - 1) {
+                result += ", ";
+            }
         }
         result += ");\n";
         return result;
@@ -151,45 +148,58 @@ public:
 
     void execute(SymbolRegistry& symbols, std::istream& input, std::ostream& output) const override
     {
-        if (holds_alternative<Expr*>(operand)) {
-            output << get<Expr*>(operand)->eval(symbols) << std::endl;
-        } else {
-            output << get<string>(operand) << std::endl;
+        for (const auto& operand : operands) {
+            if (auto literal = dynamic_cast<LiteralExpr*>(operand)) {
+                output << literal->getValue();
+            } else if (auto variable = dynamic_cast<VariableExpr*>(operand)) {
+                output << operand->eval(symbols);
+            } else if (auto number = dynamic_cast<NumberExpr*>(operand)) {
+                output << operand->eval(symbols);
+            } else {
+                throw std::runtime_error("Invalid expression type for WriteStatement.");
+            }
         }
+        output << std::endl;
     }
 };
 
 class ReadStatement : public Statement {
 private:
-    Token identifier;
+    vector<Token> identifiers;
 
 public:
-    ReadStatement(const Token& identifier)
-        : identifier(identifier)
+    ReadStatement(const vector<Token>& identifiers)
+        : identifiers(identifiers)
     {
     }
 
     string toString(int spaceCount) const override
     {
-        return indentStringWithSpaces(spaceCount, "ReadStatement(" + identifier.lexeme + ");\n");
+        string result = indentStringWithSpaces(spaceCount, "ReadStatement(");
+        for (size_t i = 0; i < identifiers.size(); ++i) {
+            result += identifiers[i].lexeme;
+            if (i < identifiers.size() - 1) {
+                result += ", ";
+            }
+        }
+        result += ");\n";
+        return result;
     }
 
     void execute(SymbolRegistry& symbols, std::istream& input, std::ostream& output) const override
     {
-        std::string inputStr;
-        input >> inputStr;
-        // Check if the input is a valid number
-        bool isNumber = true;
-        for (char c : inputStr) {
-            if (!isdigit(c)) {
-                isNumber = false;
-                break;
+        for (const auto& identifier : identifiers) {
+            std::string inputStr;
+            input >> inputStr;
+
+            // Check if the input is a valid number
+            std::regex numberRegex(R"(^-?\d+$)");
+            bool isNumber = std::regex_match(inputStr, numberRegex);
+            if (!isNumber) {
+                throw std::runtime_error("Invalid input for variable '" + identifier.lexeme + "': " + inputStr + " at line " + std::to_string(identifier.start_line) + ", column " + std::to_string(identifier.start_column));
             }
+            symbols.set(identifier.lexeme, std::stof(inputStr));
         }
-        if (!isNumber) {
-            throw std::runtime_error("Invalid input for variable '" + identifier.lexeme + "': " + inputStr + " at line " + std::to_string(identifier.start_line) + ", column " + std::to_string(identifier.start_column));
-        }
-        symbols.set(identifier.lexeme, std::stof(inputStr));
     }
 };
 

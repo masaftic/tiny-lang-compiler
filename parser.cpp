@@ -66,7 +66,7 @@ Statement* Parser::ifStatement()
 
     consume(Token::Type::THEN, "Expect 'then' keyword.");
     vector<Statement*> thenBranch;
-    while (currentToken.type != Token::Type::END && currentToken.type != Token::Type::ENDOFFILE) {
+    while (currentToken.type != Token::Type::END && currentToken.type != Token::Type::ENDOFFILE && currentToken.type != Token::Type::ELSE) {
         thenBranch.push_back(statement());
     }
     consume(Token::Type::END, "Expect 'end' keyword.");
@@ -98,24 +98,41 @@ Statement* Parser::repeatStatement()
     return new RepeatStatement(body, condition);
 }
 
+/*
+
+repeat
+    fact := fact*x;
+    x := x-1;
+until x=0;
+
+*/
+
 Statement* Parser::writeStatement()
 {
     consume(Token::Type::WRITE, "Expect 'write' keyword.");
-    Expr* expr = expression();
+    vector<Expr*> expressions;
+
+    do {
+        expressions.push_back(expression());
+    } while (match(Token::Type::COMMA));
+
     consume(Token::Type::SEMI_COLON, "Expect ';' after statement.");
-    if (auto literal = dynamic_cast<LiteralExpr*>(expr)) {
-        return new WriteStatement(literal->getValue());
-    }
-    return new WriteStatement(expr);
+    return new WriteStatement(expressions);
 }
 
 Statement* Parser::readStatement()
 {
     consume(Token::Type::READ, "Expect 'read' keyword.");
-    Token identifier = currentToken;
-    consume(Token::Type::IDENTIFIER, "Expect identifier.");
+    vector<Token> identifiers;
+
+    do {
+        Token identifier = currentToken;
+        consume(Token::Type::IDENTIFIER, "Expect identifier.");
+        identifiers.push_back(identifier);
+    } while (match(Token::Type::COMMA));
+
     consume(Token::Type::SEMI_COLON, "Expect ';' after statement.");
-    return new ReadStatement(identifier);
+    return new ReadStatement(identifiers);
 }
 
 Token Parser::previous()
@@ -140,6 +157,8 @@ Expr* Parser::equality()
     return left;
 }
 
+// 1 + 2< 2 + 3
+
 Expr* Parser::comparison()
 {
     Expr* left = this->term();
@@ -151,6 +170,8 @@ Expr* Parser::comparison()
 
     return left;
 }
+
+// 1 + 2 * 3
 
 Expr* Parser::term()
 {
@@ -193,12 +214,24 @@ Expr* Parser::primary()
         return new VariableExpr(previous());
     }
 
-    addError(previous(), "Expect expression.");
+    // It's generally better to report an error at the current token
+    // if an expression was expected but not found.
+    addError(currentToken, "Expect expression.");
     throw ParserError();
 }
 
 void Parser::synchronize()
 {
+    // If the current token is already a valid start of a new statement,
+    // return immediately. The parser will then attempt to parse it.
+    if (currentToken.type == Token::Type::IF ||
+        currentToken.type == Token::Type::REPEAT ||
+        currentToken.type == Token::Type::WRITE ||
+        currentToken.type == Token::Type::READ ||
+        currentToken.type == Token::Type::IDENTIFIER) {
+        return;
+    }
+
     advance();
 
     while (currentToken.type != Token::Type::ENDOFFILE) {
@@ -206,16 +239,21 @@ void Parser::synchronize()
             return;
         }
 
+        // Check if the current token is a statement starter or a keyword
         switch (currentToken.type) {
-        case Token::Type::IF:
-        case Token::Type::REPEAT:
-        case Token::Type::WRITE:
-        case Token::Type::READ:
-            return;
-        default:
-            break;
+            case Token::Type::IF:
+            case Token::Type::REPEAT:
+            case Token::Type::WRITE:
+            case Token::Type::READ:
+            case Token::Type::IDENTIFIER:
+            case Token::Type::END:
+            case Token::Type::ELSE:
+            case Token::Type::UNTIL:
+            case Token::Type::THEN:
+                return;
+            default:
+                break;
         }
-
         advance();
     }
 }
@@ -233,7 +271,13 @@ void Parser::consume(Token::Type type, const string& message)
         return;
     }
 
-    addError(previous(), message);
+    string errorMessage = message;
+    if (currentToken.type == Token::Type::ENDOFFILE) {
+        errorMessage += " Found end of file instead.";
+    } else {
+        errorMessage += " Found '" + currentToken.lexeme + "' instead.";
+    }
+    addError(currentToken, errorMessage); // Report error at the current token
     throw ParserError();
 }
 
@@ -250,4 +294,9 @@ bool Parser::match(Token::Type type)
 bool Parser::check(Token::Type type)
 {
     return currentToken.type == type;
+}
+
+void Parser::addError(const Token& token, const string& message)
+{
+    this->errors.push_back("Syntax error: " + message + " at line " + to_string(token.start_line) + ", column " + to_string(token.start_column));
 }

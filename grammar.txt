@@ -1,18 +1,101 @@
-program    -> statement*
-statement  -> assignment ";" 
-            | write ";"
-            | read ";"
-            | repeatStmt ";"
-            | ifStmt 
+Program     -> Statement*
 
-assignment -> IDENTIFIER ":=" expression
-ifStmt     -> "if" expression "then" statement* "end" ("else" statement* "end")?
-repeatStmt -> "repeat" statement* "until" expression
-write      -> "write" expression
-read       -> "read" IDENTIFIER
-expression -> equality
-equality   -> comparison (("=" | "!=") comparison)*
-comparison -> term (("<" | ">" | "<=" | ">=") term)*
-term       -> factor (("+" | "-") factor)*
-factor     -> primary (("*" | "/") primary)*
-primary    -> NUMBER | STRING | "(" expression ")"
+Statement   -> Assignment
+            | Write
+            | Read
+            | RepeatStmt
+            | IfStmt 
+
+Assignment  -> IDENTIFIER ":=" Expression ";"
+IfStmt      -> "if" Expression "then" Statement* "end" ("else" Statement* "end")?
+RepeatStmt  -> "repeat" Statement* "until" Expression ";"
+Write       -> "write" Expression ("," Expression)* ";"
+Read        -> "read" IDENTIFIER ("," IDENTIFIER)? ";"
+
+Expression  -> Equality
+Equality    -> Comparison (("=" | "!=") Comparison)*
+Comparison  -> Term (("<" | ">" | "<=" | ">=") Term)*
+Term        -> Factor (("+" | "-") Factor)*
+Factor      -> Primary (("*" | "/") Primary)*
+Primary     -> NUMBER | STRING | "(" Expression ")"
+
+
+NUMBER      -> digit+
+STRING      -> '"' (any character except '"')* '"'
+IDENTIFIER  -> letter (letter | digit)*
+
+
+Recursive Descent Parser
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+P -> A
+A -> statement A | ε
+
+
+Program     -> Statements
+
+Statements  -> Statement Statements
+            | ε
+
+
+Statement   -> Assignment
+            | Write
+            | Read
+            | RepeatStmt
+            | IfStmt
+
+
+Assignment  -> IDENTIFIER ":=" Expression ";"
+IfStmt      -> "if" Expression "then" Statements "end" ElsePart
+ElsePart    -> "else" Statements "end"
+            | ε
+
+RepeatStmt  -> "repeat" Statements "until" Expression ";"
+Write       -> "write" Expression WriteTail ";"
+WriteTail   -> "," Expression WriteTail
+            | ε
+
+Read        -> "read" IDENTIFIER ReadTail ";"
+ReadTail    -> "," IDENTIFIER ReadTail
+            | ε
+
+
+Expression   -> Equality
+Equality     -> Comparison EqualityTail
+EqualityTail -> ("=" | "!=") Comparison EqualityTail
+             | ε
+
+Comparison     -> Term ComparisonTail
+ComparisonTail -> ("<" | ">" | "<=" | ">=") Term ComparisonTail
+               | ε
+
+Term        -> Factor TermTail
+TermTail    -> ("+" | "-") Factor TermTail
+            | ε
+
+Factor      -> Primary FactorTail
+FactorTail  -> ("*" | "/") Primary FactorTail
+            | ε
+
+Primary     -> NUMBER
+            | STRING
+            | "(" Expression ")"
+
+
